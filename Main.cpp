@@ -7,12 +7,12 @@
 template<typename T>
 struct minSet {
 	struct item {
-		uint64_t key;
+		int key;
 		double prior;
 		T value;
 		item* l, * r;
 		item() :key(0), prior(0), l(NULL), r(NULL) { };
-		item(uint64_t key, double prior, const T& value) : key(key), prior(prior), value(value), l(NULL), r(NULL) { };
+		item(int key, double prior, const T& value) : key(key), prior(prior), value(value), l(NULL), r(NULL) { };
 	};
 	
 	typedef item* pitem;
@@ -26,7 +26,7 @@ struct minSet {
 	~minSet() {
 		if(root) recurDel(root);
 	}
-	void _split(pitem t, uint64_t key, pitem& l, pitem& r) {
+	void _split(pitem t, int key, pitem& l, pitem& r) {
 		if (!t)
 			l = r = NULL;
 		else if (key < t->key)
@@ -55,7 +55,7 @@ struct minSet {
 		t = new_t;
 	}
 
-	void _erase(pitem& t, uint64_t key) {
+	void _erase(pitem& t, int key) {
 		if (!t) {
 			return;
 		}
@@ -78,7 +78,7 @@ struct minSet {
 		return l;
 	}
 
-	pitem _search(uint64_t key) {
+	pitem _search(int key) {
 		pitem p = root;
 		while (p && p->key != key) {
 			p = (key < p->key ? p->l : p->r);
@@ -92,7 +92,7 @@ struct minSet {
 		}
 		return item();
 	}
-	item get(uint64_t key) {
+	item get(int key) {
 		pitem p = _search(key);
 		if (p) {
 			return *p;
@@ -100,13 +100,13 @@ struct minSet {
 			return item();
 		}
 	}
-	void erase(uint64_t key) {
+	void erase(int key) {
 		_erase(root, key);
 	}
 	bool is_empty() {
 		return !root;
 	}
-	void update(uint64_t key, double prior, const T& value) {
+	void update(int key, double prior, const T& value) {
 		pitem it = _search(key);
 		if (it) {
 			erase(key);
@@ -118,11 +118,11 @@ struct minSet {
 
 struct graph {
 	struct graphShadingEdge {
-		uint64_t fineness; //Крупность дороги, т.е. чем более крупная дорога тем больше эта величина 
+		int fineness; //Крупность дороги, т.е. чем более крупная дорога тем больше эта величина 
 		double shading; // Затененность дороги выраженная в длине незатененной части
 		double length; // Длина дороги 
-		uint64_t node; //Вершина конца ребра
-		uint64_t prevNode; //вершина начала ребра
+		int node; //Вершина конца ребра
+		int prevNode; //вершина начала ребра
 	};
 
 	struct graphNode {
@@ -131,49 +131,70 @@ struct graph {
 
 	};
 	struct graphRoute {
-		std::vector<graphNode> Nodes;
+		std::vector<int> Edges;
 		double shading;
-	};
-	struct weightNode {
-		uint64_t index;
-		uint64_t fineness;
 	};
 	
 	std::vector<graphShadingEdge> Edges;
 	std::vector<graphNode> Nodes;
-	std::vector<std::vector<weightNode>> adjacencyMatrix;
-	graphShadingEdge getShadingEdge(uint64_t fineness, uint64_t Node1, uint64_t Node2);
-	graphNode getNode(uint64_t Node);// --map
-	double getShading(graphNode Node1, graphNode Node2);// -shading
-	graphRoute getRoute(uint64_t startNode, uint64_t endNode);// ---output
-	std::vector<weightNode> getadjacencyMatrix(uint64_t Node);
-	double getLength2(graphNode Node1, graphNode Node2);
+	std::vector<std::vector<int>> adjacencyMatrix;
+	graphShadingEdge getShadingEdge(int edgeIndex);
+	graphRoute getRoute(int startNode, int endNode);
+	std::vector<int>& getadjacencyMatrix(int Node);
+	double getLength2(int _Node1, int _Node2);
 	graph();
 };
-graph::graphNode graph::getNode(uint64_t Node) {
-	return Nodes[Node];
-}
 graph::graph() {
+	Edges = {
+		{1, 2, 10, 1, 0},//0
+		{1, 2, 10, 0, 1},//1
 
-}
+		{1, 0, 10, 0, 3},//2
+		{1, 0, 10, 3, 0},//3
 
-double graph::getShading(graph::graphNode Node1, graph::graphNode Node2) {
-	return getLength2(Node1, Node2);
+		{2, 1, 4, 1, 2},//4
+		{2, 1, 4, 2, 1},//5
+
+		{3, 1, 5, 1, 3},//6
+		{3, 1, 5, 3, 1},//7
+
+		{1, 10, 10, 2, 3},//8
+		{1, 10, 10, 3, 2},//9
+
+		{1, 10, 100, 2, 4},//10
+		{1, 10, 100, 4, 2},//11
+
+		{1, 2, 6, 3, 4},//12
+		{1, 2, 6, 4, 3},//13
+	};
+	Nodes = {
+		{0,0},
+		{5, 0},
+		{5, 5},
+		{0, 5},
+		{2.5, 10}
+	};
+	adjacencyMatrix = {
+		{0, 3}, //0
+		{1, 5, 7}, //1
+		{4, 9, 11}, //2
+		{2, 6, 8, 13}, //3
+		{10, 12} //4
+	};
 }
-graph::graphShadingEdge graph::getShadingEdge(uint64_t fineness, uint64_t Node1, uint64_t Node2) {
-	graphShadingEdge gse = { 1, getShading(getNode(Node1),getNode(Node2)),  getLength2(getNode(Node1),getNode(Node2)), Node1, Node2};
-	return gse;
+graph::graphShadingEdge graph::getShadingEdge(int edgeIndex) {
+	return Edges[edgeIndex];
 }
-std::vector<graph::weightNode> graph::getadjacencyMatrix(uint64_t Node) {
-	return std::vector<graph::weightNode>();
+std::vector<int>& graph::getadjacencyMatrix(int Node) {
+	return adjacencyMatrix[Node];
 }
 /*
 struct minimumsSet {
 	struct minimumsSetElement {
 		double key;
 		double value;
-		uint64_t edgeIndex;
-		uint64_t nodeIndex;
+		int edgeIndex;
+		int nodeIndex;
 		char inf;
 	};
 	std::vector<minimumsSetElement> _array;
@@ -191,7 +212,7 @@ struct minimumsSet {
 		minimumsSetElement ans = {
 			0, 0, 0, 0, 1
 		};
-		for (uint64_t i = 0; i < _array.size(); i++) {
+		for (int i = 0; i < _array.size(); i++) {
 			if (used[i] == 0 &&(ans.inf || ans.key > _array[i].key)) {
 				ans = _array[i];
 			}
@@ -199,24 +220,24 @@ struct minimumsSet {
 		return ans;
 	}
 
-	minimumsSetElement get(uint64_t nodeIndex) {
+	minimumsSetElement get(int nodeIndex) {
 		bool updated = false;
 		minimumsSetElement ans = {
 			0, 0, 0, 0, 1
 		};
-		for (uint64_t i = 0; i < _array.size(); i++) {
+		for (int i = 0; i < _array.size(); i++) {
 			if (used[i] == 0 &&nodeIndex == _array[i].nodeIndex) {
 				ans = _array[i];
 			}
 		}
 		return ans;
 	}
-	void update(uint64_t nodeIndex, double weight,  uint64_t edgeIndex, double shading) {
+	void update(int nodeIndex, double weight,  int edgeIndex, double shading) {
 		bool updated = false;
 		minimumsSetElement el = {
 			 weight, shading, edgeIndex, nodeIndex
 		};
-		for (uint64_t i = 0; i < _array.size(); i++) {
+		for (int i = 0; i < _array.size(); i++) {
 			if (nodeIndex == _array[i].nodeIndex) {
 				_array[i] = el;
 				updated = true;
@@ -229,8 +250,8 @@ struct minimumsSet {
 		}
 	}
 
-	void erase(uint64_t nodeIndex) {
-		for (uint64_t i = 0; i < _array.size(); i++) {
+	void erase(int nodeIndex) {
+		for (int i = 0; i < _array.size(); i++) {
 			if (nodeIndex == _array[i].nodeIndex) {
 				used[i] = 1;
 			}
@@ -243,16 +264,16 @@ struct minimumsSet {
 	struct minimumsSetElement {
 		double key;//Приоритет
 		double value;
-		uint64_t edgeIndex;
-		uint64_t nodeIndex;//Ключ
+		int edgeIndex;
+		int nodeIndex;//Ключ
 		char inf;
 	};
 	struct minSetType {
 		double value;
-		uint64_t edgeIndex;
+		int edgeIndex;
 		char inf;
 		minSetType() : value(0), edgeIndex(0), inf(1) {}
-		minSetType(double value, uint64_t edgeIndex = 0, char inf = 1) : value(value), edgeIndex(edgeIndex), inf(inf) {};
+		minSetType(double value, int edgeIndex = 0, char inf = 1) : value(value), edgeIndex(edgeIndex), inf(inf) {};
 	};
 	minSet<minSetType> treap;
 	bool is_empty() {
@@ -270,7 +291,7 @@ struct minimumsSet {
 		return ans;
 	}
 
-	minimumsSetElement get(uint64_t nodeIndex) {
+	minimumsSetElement get(int nodeIndex) {
 		auto ret = treap.get(nodeIndex);
 		minimumsSetElement ans = {
 			ret.prior,
@@ -282,7 +303,7 @@ struct minimumsSet {
 		return ans;
 	}
 
-	void update(uint64_t nodeIndex, double weight, uint64_t edgeIndex, double shading) {
+	void update(int nodeIndex, double weight, int edgeIndex, double shading) {
 		bool updated = false;
 		minSetType el = {
 			 shading, edgeIndex, 0
@@ -290,49 +311,50 @@ struct minimumsSet {
 		treap.update(nodeIndex, weight, el);
 	}
 
-	void erase(uint64_t nodeIndex) {
+	void erase(int nodeIndex) {
 		treap.erase(nodeIndex);
 	}
 };
 
 struct usedSet {
-	std::map<uint64_t, bool> _map;
-	void update(uint64_t nodeIndex, char used) {
+	std::map<int, bool> _map;
+	void update(int nodeIndex, char used) {
 		_map[nodeIndex] = used;
 	}
-	bool get(uint64_t nodeIndex) {
+	bool get(int nodeIndex) {
 		return _map[nodeIndex];
 	}
 };
 
 struct valueSet {
 	struct valueSetElement {
-		uint64_t nodeIndex;
+		int nodeIndex;
 		double value;
-		uint64_t edgeIndex;
-		uint64_t prevNodeIndex;
+		int edgeIndex;
+		int prevNodeIndex;
 	};
-	std::map<uint64_t, valueSetElement> _map;
-	void update(uint64_t nodeIndex, double value, uint64_t edgeIndex, uint64_t prevNodeIndex) {
+	std::map<int, valueSetElement> _map;
+	void update(int nodeIndex, double value, int edgeIndex, int prevNodeIndex) {
 		valueSetElement el = {
 			 nodeIndex, value, edgeIndex, prevNodeIndex
 		};
 		_map[nodeIndex] = el;
 	}
-	valueSetElement get(uint64_t nodeIndex) {
+	valueSetElement get(int nodeIndex) {
 		return _map[nodeIndex];
 	}
 };
 
-double graph::getLength2(graph::graphNode Node1, graph::graphNode Node2) {
-	return 111200 *acos(sin(Node1.x) * sin(Node2.x) + cos(Node1.x) * cos(Node2.x)*cos(Node2.x - Node2.y));
+double graph::getLength2(int _Node1, int _Node2) {
+	graphNode Node1 = Nodes[_Node1], Node2 = Nodes[_Node2];
+	return sqrt((Node1.x - Node2.x)* (Node1.x - Node2.x) + (Node1.y - Node2.y) * (Node1.y - Node2.y));
 }
-double getRemotennesWeight(graph& _graph, uint64_t startNode, uint64_t endNode, uint64_t EdgeNode, double fineness) {
+double getRemotennesWeight(graph& _graph, int startNode, int endNode, int EdgeNode, double fineness) {
 	// -O(exp(x^2))
-	return std::min(std::exp(_graph.getLength2(_graph.getNode(startNode), _graph.getNode(EdgeNode))/fineness), std::exp(_graph.getLength2(_graph.getNode(endNode), _graph.getNode(EdgeNode))) / fineness);
+	return std::min(std::exp(_graph.getLength2(startNode, EdgeNode)/fineness), std::exp(_graph.getLength2(endNode, EdgeNode)) / fineness);
 }
 
-double getEdgeWeight(graph& _graph, double shading, double length,uint64_t startNode, uint64_t endNode, uint64_t EdgeNode, double fineness) {
+double getEdgeWeight(graph& _graph, double shading, double length,int startNode, int endNode, int EdgeNode, double fineness) {
 	return shading + 0.1 * length + getRemotennesWeight(_graph, startNode, endNode, EdgeNode, fineness);
 }
 
@@ -345,7 +367,7 @@ std::vector<double> trans_finesness = {
 
 
  
-graph::graphRoute graph::getRoute(uint64_t startNode, uint64_t endNode) {
+graph::graphRoute graph::getRoute(int startNode, int endNode) {
 	minimumsSet minSet;
 	usedSet usedSet;
 	valueSet valueSet;
@@ -358,22 +380,23 @@ graph::graphRoute graph::getRoute(uint64_t startNode, uint64_t endNode) {
 		minimumsSet::minimumsSetElement el = minSet.getMinimum();
 		if (el.nodeIndex == endNode) {
 			getans = true;
-			uint64_t node = endNode;
+			int node = endNode;
 			ans.shading = el.value;
 			while (node != startNode) {
 				valueSet::valueSetElement route_el = valueSet.get(node);
-				ans.Nodes.push_back(getNode(route_el.nodeIndex));
+				ans.Edges.push_back(route_el.edgeIndex);
+		
 				node = route_el.prevNodeIndex;
 			}
 			break;
 		}
 		for (auto& e : getadjacencyMatrix(el.nodeIndex)) {
-			graph::graphShadingEdge curEdge = getShadingEdge(e.fineness, el.nodeIndex, e.index);
+			graph::graphShadingEdge curEdge = getShadingEdge(e);
 			double new_length = el.key + getEdgeWeight(*this, curEdge.shading, curEdge.length, startNode, endNode, curEdge.node, trans_finesness[curEdge.fineness]);
 			double new_shading = el.value + curEdge.shading;
 			if (usedSet.get(curEdge.node) == 0 && (minSet.get(curEdge.node).inf || minSet.get(curEdge.node).key > new_length)) {
-				minSet.update(curEdge.node, new_length, e.index, new_shading);
-				valueSet.update(curEdge.node, new_shading, e.index, el.nodeIndex);
+				minSet.update(curEdge.node, new_length, e, new_shading);
+				valueSet.update(curEdge.node, new_shading, e, el.nodeIndex);
 			}
 		}
 		minSet.erase(el.nodeIndex);
@@ -383,12 +406,12 @@ graph::graphRoute graph::getRoute(uint64_t startNode, uint64_t endNode) {
 }
 int main() {
 	graph plGraph;
-	uint64_t node1, node2;
+	int node1, node2;
 	std::cin >> node1 >> node2;
 	graph::graphRoute route = plGraph.getRoute(node1, node2);
 	std::cout << route.shading << std::endl;
-	for (auto& e : route.Nodes) {
-		std::cout << e.x << e.y << " ";
+	for (auto& e : route.Edges) {
+		std::cout << e << " ";
 	}
 	std::cout << std::endl;
 }
